@@ -4,6 +4,31 @@
   const config = window.WARDROBE_CONFIG || {};
   const BUCKET = config.storageBucket || "wardrobe-images";
   const OWNER_ID = config.ownerId || "00000000-0000-0000-0000-000000000001";
+  const THEMES = ["dark", "forest", "midnight", "coffee", "plum", "light", "lime", "sand", "blue"];
+  const DARK_THEMES = ["dark", "forest", "midnight", "coffee", "plum", "sand"];
+  const ITEM_COLORS = [
+    { value: "", label: "Sin especificar", hex: "transparent" },
+    { value: "Negro", hex: "#282828" },
+    { value: "Blanco", hex: "#f1f1ed" },
+    { value: "Gris", hex: "#858984" },
+    { value: "Beige", hex: "#c5b696" },
+    { value: "Marrón", hex: "#79563e" },
+    { value: "Rojo", hex: "#bd5750" },
+    { value: "Rosa", hex: "#d99eaa" },
+    { value: "Naranja", hex: "#ce7b42" },
+    { value: "Amarillo", hex: "#d4b44f" },
+    { value: "Verde", hex: "#71865c" },
+    { value: "Azul", hex: "#607f99" },
+    { value: "Azul marino", hex: "#394759" },
+    { value: "Morado", hex: "#87728f" }
+  ];
+  const HOVER_SOUNDS = {
+    chime: { label: "Campanilla suave", type: "sine", start: 720, end: 940, duration: 0.09, volume: 0.018 },
+    drop: { label: "Gota", type: "sine", start: 880, end: 510, duration: 0.12, volume: 0.016 },
+    wood: { label: "Madera", type: "triangle", start: 390, end: 330, duration: 0.075, volume: 0.014 },
+    crystal: { label: "Cristal", type: "sine", start: 1120, end: 1480, duration: 0.065, volume: 0.012 },
+    pulse: { label: "Pulso cálido", type: "triangle", start: 520, end: 680, duration: 0.13, volume: 0.015 }
+  };
   const $ = (selector, root = document) => root.querySelector(selector);
   const page = $("#page-content");
   const sidebar = $("#sidebar");
@@ -19,6 +44,7 @@
     items: [],
     images: [],
     settings: {},
+    returnTheme: "light",
     view: "home",
     search: "",
     sort: "newest",
@@ -27,6 +53,8 @@
     filterColor: "",
     filterSize: "",
     returnToItemAfterCategory: false,
+    hoverAudio: null,
+    hoverAudioUnavailable: false,
     signedUrlTimer: null
   };
 
@@ -86,8 +114,11 @@
   }
 
   function applyTheme() {
-    document.documentElement.dataset.theme = state.settings.theme === "dark" ? "dark" : "light";
-    $("#theme-button").textContent = document.documentElement.dataset.theme === "dark" ? "☼" : "◐";
+    const theme = THEMES.includes(state.settings.theme) ? state.settings.theme : "dark";
+    state.settings.theme = theme;
+    if (!DARK_THEMES.includes(theme)) state.returnTheme = theme;
+    document.documentElement.dataset.theme = theme;
+    $("#theme-button").textContent = DARK_THEMES.includes(theme) ? "☼" : "◐";
   }
 
   async function loadPublicData() {
@@ -310,7 +341,7 @@
       select.id = id;
       select.setAttribute("aria-label", label);
       addOption(select, "", label);
-      getDistinctValues(field).forEach(value => addOption(select, value, value));
+      getDistinctValues(field).forEach(value => addOption(select, value, field === "color" ? getColorLabel(value) : value));
       select.value = selected;
       toolbar.append(select);
     });
@@ -488,7 +519,7 @@
     const name = document.createElement("strong");
     name.textContent = item.name;
     const category = document.createElement("span");
-    category.textContent = [item.garment_type, (sectionById(item.section_id) || {}).name, item.color]
+    category.textContent = [item.garment_type, (sectionById(item.section_id) || {}).name, getColorLabel(item.color)]
       .filter(Boolean).join(" · ");
     const price = document.createElement("span");
     price.className = "item-price";
@@ -500,6 +531,24 @@
 
   function formatPrice(price) {
     return new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(Number(price));
+  }
+
+  function getColorChoice(value) {
+    const normalized = String(value || "").trim().toLocaleLowerCase("es");
+    return ITEM_COLORS.find(color => color.value.toLocaleLowerCase("es") === normalized);
+  }
+
+  function getColorLabel(value) {
+    if (!value) return "";
+    const choice = getColorChoice(value);
+    if (choice) return choice.label || choice.value;
+    return /^#[0-9a-f]{6}$/i.test(value) ? `Personalizado ${value.toUpperCase()}` : String(value);
+  }
+
+  function getColorSwatch(value) {
+    const choice = getColorChoice(value);
+    if (choice) return choice.hex;
+    return /^#[0-9a-f]{6}$/i.test(value) ? value : "#858984";
   }
 
   function renderSettings() {
@@ -518,11 +567,54 @@
     copy.append(title, desc);
     const select = document.createElement("select");
     select.id = "theme-select";
-    addOption(select, "light", "Claro");
-    addOption(select, "dark", "Oscuro");
-    select.value = state.settings.theme === "dark" ? "dark" : "light";
+    [
+      ["dark", "Grafito nocturno"],
+      ["forest", "Bosque nocturno"],
+      ["midnight", "Azul medianoche"],
+      ["coffee", "Café nocturno"],
+      ["plum", "Ciruela nocturna"],
+      ["sand", "Arena nocturna"],
+      ["light", "Claro suave"],
+      ["lime", "Lima suave"],
+      ["blue", "Azul gris claro"]
+    ].forEach(([value, label]) => addOption(select, value, label));
+    select.value = THEMES.includes(state.settings.theme) ? state.settings.theme : "dark";
     row.append(copy, select);
-    panel.append(row);
+    const soundRow = document.createElement("div");
+    soundRow.className = "settings-row";
+    const soundCopy = document.createElement("div");
+    const soundTitle = document.createElement("strong");
+    soundTitle.textContent = "Sonido al pasar por botones";
+    const soundDescription = document.createElement("p");
+    soundDescription.className = "muted";
+    soundDescription.textContent = "Un tono breve y suave al entrar con el ratón; se activa tras el primer clic.";
+    soundCopy.append(soundTitle, soundDescription);
+    const soundLabel = document.createElement("label");
+    soundLabel.className = "checkbox-label sound-toggle";
+    soundLabel.htmlFor = "hover-sound";
+    const soundCheckbox = document.createElement("input");
+    soundCheckbox.type = "checkbox";
+    soundCheckbox.id = "hover-sound";
+    soundCheckbox.checked = state.settings.hover_sound !== false;
+    soundLabel.append(soundCheckbox);
+    soundRow.append(soundCopy, soundLabel);
+    const soundStyleRow = document.createElement("div");
+    soundStyleRow.className = "settings-row";
+    const soundStyleCopy = document.createElement("div");
+    const soundStyleTitle = document.createElement("strong");
+    soundStyleTitle.textContent = "Estilo de sonido";
+    const soundStyleDescription = document.createElement("p");
+    soundStyleDescription.className = "muted";
+    soundStyleDescription.textContent = "Elige uno de los cinco tonos suaves.";
+    soundStyleCopy.append(soundStyleTitle, soundStyleDescription);
+    const soundSelect = document.createElement("select");
+    soundSelect.id = "hover-sound-style";
+    Object.entries(HOVER_SOUNDS).forEach(([value, preset]) => addOption(soundSelect, value, preset.label));
+    soundSelect.value = Object.prototype.hasOwnProperty.call(HOVER_SOUNDS, state.settings.hover_sound_style)
+      ? state.settings.hover_sound_style
+      : "chime";
+    soundStyleRow.append(soundStyleCopy, soundSelect);
+    panel.append(row, soundRow, soundStyleRow);
     page.append(panel);
   }
 
@@ -626,10 +718,27 @@
           ${!item && !hasCategories ? '<p class="form-hint span-two">Crea una categoría para poder guardar prendas.</p><button type="button" class="text-button span-two" data-action="new-category-from-item">＋ Crear una categoría</button>' : ""}
           <label class="span-two">Nombre<input name="name" maxlength="120" required></label>
           <label>Tipo de prenda<input name="garment_type" list="garment-types" maxlength="80" placeholder="Camiseta, vaqueros…" required></label>
-          <label>Color<input name="color" list="garment-colors" maxlength="80" placeholder="Negro, beige…"></label>
+          <div class="color-field">
+            <span class="field-label">Color</span>
+            <div class="color-picker">
+              <input name="color" type="hidden">
+              <button id="color-picker-trigger" class="color-picker-trigger" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="color-picker-options">
+                <span class="color-swatch" data-selected-color-swatch aria-hidden="true"></span>
+                <span data-selected-color-label>Sin especificar</span>
+                <span class="color-chevron" aria-hidden="true"></span>
+              </button>
+              <div id="color-picker-options" class="color-picker-menu" role="group" aria-label="Elige un color" hidden>
+                ${ITEM_COLORS.map(color => `<button class="color-option" type="button" data-color-value="${escapeHtml(color.value)}" aria-pressed="false"><span class="color-swatch" style="--swatch-color:${color.hex}" aria-hidden="true"></span><span>${escapeHtml(color.label || color.value)}</span></button>`).join("")}
+                <div class="color-option-custom">
+                  <span class="color-swatch custom-color-swatch" aria-hidden="true"></span>
+                  <span>Elegir otro color</span>
+                  <input id="custom-item-color" type="color" value="#858984" aria-label="Elegir un color personalizado">
+                </div>
+              </div>
+            </div>
+          </div>
           <label>Talla<input name="size" list="garment-sizes" maxlength="40" placeholder="S, 38, única…"></label>
           <datalist id="garment-types">${getDistinctValues("garment_type").map(value => `<option value="${escapeHtml(value)}"></option>`).join("")}</datalist>
-          <datalist id="garment-colors">${getDistinctValues("color").map(value => `<option value="${escapeHtml(value)}"></option>`).join("")}</datalist>
           <datalist id="garment-sizes">${getDistinctValues("size").map(value => `<option value="${escapeHtml(value)}"></option>`).join("")}</datalist>
           <label>Precio (EUR)<input name="price" type="number" min="0" max="99999999" step="0.01" inputmode="decimal"></label>
           <label>Enlace de compra<input name="url" type="url" maxlength="2048" placeholder="https://…" inputmode="url"></label>
@@ -654,12 +763,72 @@
       sectionSelect.value = selectedId && available.some(section => section.id === selectedId) ? selectedId : (available[0] ? available[0].id : "");
     };
     updateSections(item ? item.section_id : "");
+    const colorValue = form.elements.color;
+    const colorTrigger = $("#color-picker-trigger", editorDialog);
+    const colorMenu = $("#color-picker-options", editorDialog);
+    const colorLabel = $("[data-selected-color-label]", editorDialog);
+    const selectedSwatch = $("[data-selected-color-swatch]", editorDialog);
+    const customColor = $("#custom-item-color", editorDialog);
+    const updateColor = value => {
+      const choice = getColorChoice(value);
+      const normalizedValue = choice ? choice.value : String(value || "").trim();
+      const label = getColorLabel(normalizedValue) || "Sin especificar";
+      colorValue.value = normalizedValue;
+      colorLabel.textContent = label;
+      selectedSwatch.style.backgroundColor = getColorSwatch(normalizedValue);
+      colorTrigger.setAttribute("aria-label", `Color: ${label}`);
+      if (/^#[0-9a-f]{6}$/i.test(normalizedValue)) customColor.value = normalizedValue;
+      colorMenu.querySelectorAll("[data-color-value]").forEach(option => {
+        const selected = option.dataset.colorValue === normalizedValue;
+        option.setAttribute("aria-pressed", String(selected));
+        option.classList.toggle("selected", selected);
+      });
+    };
+    updateColor(item ? item.color : "");
+    colorTrigger.addEventListener("click", () => {
+      colorMenu.hidden = !colorMenu.hidden;
+      colorTrigger.setAttribute("aria-expanded", String(!colorMenu.hidden));
+      if (!colorMenu.hidden) {
+        const selectedOption = colorMenu.querySelector('[aria-pressed="true"]') || colorMenu.querySelector("[data-color-value]");
+        if (selectedOption) selectedOption.focus();
+      }
+    });
+    colorMenu.addEventListener("click", event => {
+      const option = event.target.closest("[data-color-value]");
+      if (option) {
+        updateColor(option.dataset.colorValue);
+        colorMenu.hidden = true;
+        colorTrigger.setAttribute("aria-expanded", "false");
+        colorTrigger.focus();
+      }
+    });
+    colorMenu.addEventListener("keydown", event => {
+      if (event.key === "Escape") {
+        colorMenu.hidden = true;
+        colorTrigger.setAttribute("aria-expanded", "false");
+        colorTrigger.focus();
+        return;
+      }
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        const options = Array.from(colorMenu.querySelectorAll("[data-color-value], input[type='color']"));
+        const currentIndex = options.indexOf(document.activeElement);
+        const step = event.key === "ArrowDown" ? 1 : -1;
+        const nextIndex = (currentIndex + step + options.length) % options.length;
+        event.preventDefault();
+        options[nextIndex].focus();
+      }
+    });
+    customColor.addEventListener("change", () => {
+      updateColor(customColor.value.toUpperCase());
+      colorMenu.hidden = true;
+      colorTrigger.setAttribute("aria-expanded", "false");
+      colorTrigger.focus();
+    });
     const photos = [];
     const photoList = $("#photo-list", editorDialog);
     if (item) {
       form.elements.name.value = item.name;
       form.elements.garment_type.value = item.garment_type || "";
-      form.elements.color.value = item.color || "";
       form.elements.size.value = item.size || "";
       form.elements.price.value = item.price == null ? "" : item.price;
       form.elements.url.value = item.purchase_url || "";
@@ -1024,7 +1193,7 @@
     eyebrow.textContent = [
       (sectionById(item.section_id) || {}).name,
       item.garment_type,
-      item.color,
+      getColorLabel(item.color),
       item.size ? `Talla ${item.size}` : ""
     ].filter(Boolean).join(" · ");
     const title = document.createElement("h2");
@@ -1094,19 +1263,94 @@
     openItemDetail(id);
   }
 
-  async function saveTheme(theme) {
+  async function saveSetting(key, value) {
     const { error } = await state.client.from("app_settings").upsert({
       owner_id: state.ownerId,
-      setting_key: "theme",
-      setting_value: theme
+      setting_key: key,
+      setting_value: value
     }, { onConflict: "owner_id,setting_key" });
     if (error) {
-      console.error("Could not save theme:", error);
+      console.error(`Could not save setting "${key}":`, error);
       notify("No se pudo guardar la configuración.", true);
+      return false;
+    }
+    state.settings[key] = value;
+    return true;
+  }
+
+  async function saveTheme(theme) {
+    if (!THEMES.includes(theme)) {
+      notify("Ese estilo no está disponible.", true);
       return;
     }
-    state.settings.theme = theme;
+    if (!await saveSetting("theme", theme)) return;
     applyTheme();
+  }
+
+  async function saveHoverSound(enabled) {
+    const wasEnabled = state.settings.hover_sound !== false;
+    if (await saveSetting("hover_sound", enabled)) return;
+    const checkbox = $("#hover-sound");
+    if (checkbox) checkbox.checked = wasEnabled;
+  }
+
+  async function saveHoverSoundStyle(style) {
+    if (!Object.prototype.hasOwnProperty.call(HOVER_SOUNDS, style)) {
+      notify("Ese sonido no está disponible.", true);
+      return;
+    }
+    const previousStyle = Object.prototype.hasOwnProperty.call(HOVER_SOUNDS, state.settings.hover_sound_style)
+      ? state.settings.hover_sound_style
+      : "chime";
+    if (await saveSetting("hover_sound_style", style)) return;
+    const select = $("#hover-sound-style");
+    if (select) select.value = previousStyle;
+  }
+
+  function initializeHoverAudio() {
+    if (state.settings.hover_sound === false || state.hoverAudio || state.hoverAudioUnavailable) return;
+    const AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextConstructor) {
+      state.hoverAudioUnavailable = true;
+      console.warn("Web Audio is not available in this browser.");
+      notify("Este navegador no permite reproducir el sonido de los botones.", true);
+      return;
+    }
+    try {
+      state.hoverAudio = new AudioContextConstructor();
+      state.hoverAudio.resume().catch(error => {
+        state.hoverAudio = null;
+        state.hoverAudioUnavailable = true;
+        console.error("Could not resume button hover audio:", error);
+        notify("No se pudo activar el sonido de los botones en este navegador.", true);
+      });
+    } catch (error) {
+      state.hoverAudioUnavailable = true;
+      console.error("Could not initialize button hover audio:", error);
+      notify("No se pudo activar el sonido de los botones en este navegador.", true);
+    }
+  }
+
+  function playHoverSound() {
+    const audio = state.hoverAudio;
+    if (state.settings.hover_sound === false || !audio || audio.state !== "running") return;
+    const style = Object.prototype.hasOwnProperty.call(HOVER_SOUNDS, state.settings.hover_sound_style)
+      ? state.settings.hover_sound_style
+      : "chime";
+    const preset = HOVER_SOUNDS[style];
+    const now = audio.currentTime;
+    const tone = audio.createOscillator();
+    const volume = audio.createGain();
+    tone.type = preset.type;
+    tone.frequency.setValueAtTime(preset.start, now);
+    tone.frequency.exponentialRampToValueAtTime(preset.end, now + preset.duration * 0.65);
+    volume.gain.setValueAtTime(0.0001, now);
+    volume.gain.exponentialRampToValueAtTime(preset.volume, now + Math.min(0.012, preset.duration * 0.2));
+    volume.gain.exponentialRampToValueAtTime(0.0001, now + preset.duration);
+    tone.connect(volume);
+    volume.connect(audio.destination);
+    tone.start(now);
+    tone.stop(now + preset.duration + 0.005);
   }
 
   async function handleAction(action, id) {
@@ -1165,7 +1409,17 @@
     $("#add-item-button").addEventListener("click", () => openItemEditor());
     $("#mobile-add-button").addEventListener("click", () => openItemEditor());
     $("#menu-button").addEventListener("click", () => sidebar.classList.toggle("open"));
-    $("#theme-button").addEventListener("click", () => saveTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark"));
+    $("#theme-button").addEventListener("click", () => {
+      const currentTheme = document.documentElement.dataset.theme;
+      saveTheme(DARK_THEMES.includes(currentTheme) ? state.returnTheme : "dark");
+    });
+    document.addEventListener("pointerdown", initializeHoverAudio, { passive: true });
+    document.addEventListener("pointerover", event => {
+      if (event.pointerType !== "mouse" || !(event.target instanceof Element)) return;
+      const target = event.target.closest("button, a");
+      if (!target || target.disabled || target.contains(event.relatedTarget)) return;
+      playHoverSound();
+    });
 
     page.addEventListener("input", event => {
       if (event.target.id === "catalog-search") {
@@ -1190,6 +1444,8 @@
         state.sort = event.target.value;
         renderItemsGrid();
       } else if (event.target.id === "theme-select") saveTheme(event.target.value);
+      else if (event.target.id === "hover-sound") saveHoverSound(event.target.checked);
+      else if (event.target.id === "hover-sound-style") saveHoverSoundStyle(event.target.value);
     });
 
     [editorDialog, detailDialog, imageDialog].forEach(dialog => {

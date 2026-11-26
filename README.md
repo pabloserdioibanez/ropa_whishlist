@@ -29,7 +29,7 @@ Abre `http://localhost:8000`. La aplicación abre directamente el armario; no ti
 - **Prendas:** añade nombre, tipo, categoría, color, talla, precio, enlace, descripción y varias fotos. Puedes ordenar fotos, elegir la principal y marcar favoritos.
 - **Filtros:** busca por nombre y filtra por categoría, tipo, color, talla o favoritos; también puedes ordenar por fecha, precio o nombre.
 - **Favoritos:** filtra tus prendas favoritas.
-- **Configuración:** cambia entre tema claro y oscuro.
+- **Configuración:** elige entre nueve estilos visuales, incluidos seis oscuros (grafito nocturno, bosque nocturno, azul medianoche, café nocturno, ciruela nocturna y arena nocturna), o uno de los claros suavizados (claro suave, lima suave o azul gris claro). El grafito nocturno es el estilo inicial. También puedes seleccionar un sonido (campanilla, gota, madera, cristal o pulso cálido) y activar o desactivar el sonido de los botones. Por las restricciones del navegador, el sonido empieza después del primer clic y solo se reproduce al pasar el ratón.
 - Las fotos se comprimen en el navegador cuando es posible. Se aceptan JPG, PNG y WebP; convierte HEIC antes de subirlo.
 - Las operaciones de borrado solicitan confirmación.
 
