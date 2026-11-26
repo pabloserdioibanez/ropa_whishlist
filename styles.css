@@ -188,20 +188,15 @@ input[type="file"] { padding: 9px; font-size: 11px; }
 .sidebar { position: fixed; z-index: 5; top: 0; bottom: 0; left: 0; display: flex; width: 238px; flex-direction: column; padding: 35px 24px 24px; border-right: 1px solid var(--line); background: var(--surface); }
 .sidebar .wordmark { margin: 2px 0 58px 8px; }
 .sidebar-label { padding: 0 9px; color: var(--muted); font-size: 9px; letter-spacing: .15em; }
-.main-nav, .sidebar-bottom { display: grid; gap: 5px; }
-.main-nav { margin-top: 17px; }
-.sidebar-bottom { margin-top: auto; }
+.main-nav { display: grid; gap: 5px; margin-top: 17px; }
 .nav-link { display: flex; min-height: 43px; align-items: center; gap: 13px; padding: 0 10px; border: 0; border-radius: 4px; background: transparent; color: var(--muted); text-align: left; cursor: pointer; font-size: 12px; transition: background-color .32s var(--ease-smooth), color .32s var(--ease-smooth), transform .32s var(--ease-smooth); }
 .nav-link:hover, .nav-link.active { background: var(--accent-soft); color: var(--ink); }
 .nav-link:hover { transform: translateX(3px); }
 .nav-link.active { font-weight: 600; }
 .nav-link.active .nav-icon { color: var(--accent); }
 .nav-icon { display: inline-grid; width: 18px; place-items: center; font-size: 17px; }
-.sidebar-note { margin: 28px 8px 0; padding-top: 17px; border-top: 1px solid var(--line); color: var(--muted); font-size: 9px; letter-spacing: .15em; line-height: 1.8; }
-.sidebar-note span { letter-spacing: 0; }
 .content { min-height: 100vh; margin-left: 238px; padding: 0 5.2vw 70px; }
 .topbar { display: flex; height: 75px; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); }
-.public-warning { margin: 12px 0 0; padding: 10px 12px; border: 1px solid var(--line); background: var(--soft); color: var(--muted); font-size: 10px; line-height: 1.5; }
 .breadcrumbs { color: var(--muted); font-size: 9px; font-weight: 600; letter-spacing: .16em; }
 .breadcrumbs span { margin: 0 9px; color: var(--accent); }
 .topbar-actions { display: flex; align-items: center; gap: 11px; }
