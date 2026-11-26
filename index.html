@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f3ef">
+  <meta name="description" content="Mi armario personal">
+    <title>Mi armario</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js" defer></script>
+  <script src="./config.js" defer></script>
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <div id="app-screen" class="app-screen">
+    <aside id="sidebar" class="sidebar" hidden>
+      <a class="wordmark" href="#" data-action="home">ARMARIO<span>.</span></a>
+      <div class="sidebar-label">MI ARMARIO</div>
+      <nav class="main-nav" aria-label="Navegación">
+        <button data-nav="home" class="nav-link active"><span class="nav-icon">⌂</span> Inicio</button>
+        <button data-nav="sections" class="nav-link"><span class="nav-icon">▦</span> Categorías</button>
+        <button data-nav="items" class="nav-link"><span class="nav-icon">◫</span> Prendas</button>
+        <button data-nav="favorites" class="nav-link"><span class="nav-icon">♡</span> Favoritos</button>
+        <button data-nav="settings" class="nav-link"><span class="nav-icon">⚙</span> Configuración</button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="sidebar-note">SIN INICIO DE SESIÓN<br><span>El contenido de esta URL es público y editable.</span></div>
+      </div>
+    </aside>
+
+    <div class="mobile-topbar">
+      <button id="menu-button" class="icon-button" aria-label="Abrir menú" hidden>☰</button>
+      <a class="wordmark" href="#" data-action="go-home">ARMARIO<span>.</span></a>
+      <button id="mobile-add-button" class="icon-button" aria-label="Añadir contenido" hidden>＋</button>
+    </div>
+
+    <main class="content">
+      <header class="topbar">
+        <div id="breadcrumbs" class="breadcrumbs">MI ARMARIO <span>/</span> INICIO</div>
+        <div class="topbar-actions">
+          <button id="theme-button" class="icon-button" title="Cambiar tema" aria-label="Cambiar tema">◐</button>
+          <button id="add-item-button" class="button button-dark button-small" hidden>＋ <span>Añadir</span></button>
+        </div>
+      </header>
+      <p class="public-warning" role="note">Sin contraseña: cualquiera con esta URL puede ver, editar o borrar el armario.</p>
+      <div id="page-content"></div>
+      <p id="app-message" class="toast" role="status" aria-live="polite"></p>
+    </main>
+  </div>
+
+  <dialog id="editor-dialog" class="dialog"></dialog>
+  <dialog id="detail-dialog" class="dialog detail-dialog"></dialog>
+  <dialog id="image-dialog" class="dialog image-dialog">
+    <button class="dialog-close image-close" aria-label="Cerrar">×</button>
+    <img alt="Imagen ampliada">
+  </dialog>
+</body>
+</html>
